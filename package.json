@@ -1,0 +1,24 @@
+{
+  "name": "life-context",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Local-first desktop context capture, inference, and query platform",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node scripts/start-local.mjs",
+    "start:local": "node scripts/start-local.mjs",
+    "server": "node scripts/run-task.mjs server",
+    "collector": "node scripts/run-task.mjs collector",
+    "dashboard": "node scripts/run-task.mjs dashboard",
+    "cli": "node scripts/run-task.mjs cli",
+    "test": "node scripts/run-task.mjs test",
+    "format": "node scripts/run-task.mjs format",
+    "format:check": "node scripts/run-task.mjs format --check",
+    "help": "node scripts/run-task.mjs --help"
+  },
+  "devDependencies": {
+    "prettier": "^3.6.2"
+  }
+}

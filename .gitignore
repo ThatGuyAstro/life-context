@@ -1,0 +1,64 @@
+# Operating-system and editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Node and pnpm
+node_modules/
+.pnpm-store/
+.npm/
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+venv/
+env/
+
+# Build and test output
+build/
+dist/
+coverage/
+.coverage
+htmlcov/
+
+# Optional desktop-shell/Rust output. The root commands do not require these.
+target/
+src-tauri/target/
+
+# Local configuration and runtime data
+.env
+.env.*
+!.env.example
+*.env
+data/
+.context-artifacts/
+spool/
+artifacts/
+model/
+models/
+logs/
+tmp/
+temp/
+runtime-report.json
+*.sqlite*
+*.db*
+*.wal
+*.shm
+*.journal
+
+# Local credentials and certificate material
+secrets/
+credentials/
+*.pem
+*.key
+*.p12
+*.pfx

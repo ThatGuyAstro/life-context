@@ -1,0 +1,24 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "bundle": {
+    "active": true,
+    "targets": ["msi", "nsis"],
+    "publisher": "Life Context",
+    "shortDescription": "Local-first context desktop shell",
+    "longDescription": "A local-first Windows desktop shell for the Life Context dashboard, server, and collector.",
+    "category": "Productivity",
+    "icon": ["icons/icon.ico"],
+    "resources": {
+      "../../../services/context_server": "services/context_server",
+      "../../../services/collector": "services/collector",
+      "../../../packages/contracts/python": "packages/contracts/python"
+    },
+    "windows": {
+      "allowDowngrades": false,
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper",
+        "silent": true
+      }
+    }
+  }
+}

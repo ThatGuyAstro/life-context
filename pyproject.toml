@@ -1,0 +1,48 @@
+[project]
+name = "life-context"
+version = "0.1.0"
+description = "Local-first desktop context capture, inference, and query platform"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115,<1",
+    "httpx>=0.27,<1",
+    "mss>=9,<11",
+    "pillow>=10,<13",
+    "psutil>=5.9,<8",
+    "pydantic>=2.7,<3",
+    "uvicorn>=0.30,<1",
+    "websockets>=13,<16",
+]
+
+[project.scripts]
+contextctl = "apps.cli.contextctl:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8,<9",
+    "ruff>=0.8,<1",
+]
+
+[tool.uv]
+package = true
+
+[tool.setuptools.packages.find]
+include = ["apps", "apps.*", "services", "services.*", "packages", "packages.*"]
+
+[tool.pytest.ini_options]
+addopts = ["-ra"]
+pythonpath = ["packages/contracts/python"]
+testpaths = ["tests", "packages", "services"]
+python_files = ["test_*.py", "*_test.py"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+extend-exclude = [".venv", "build", "dist", "node_modules", "target"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.ruff.format]
+indent-style = "space"
+quote-style = "double"

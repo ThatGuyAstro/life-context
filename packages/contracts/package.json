@@ -1,0 +1,6 @@
+{
+  "name": "@life-context/contracts",
+  "private": true,
+  "description": "Transport-neutral TypeScript declarations for Life Context contracts",
+  "types": "./typescript/index.d.ts"
+}

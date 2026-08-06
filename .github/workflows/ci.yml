@@ -1,0 +1,135 @@
+name: Life Context CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: life-context-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.11"
+  NODE_VERSION: "24.x"
+  PNPM_VERSION: "11.9.0"
+
+jobs:
+  windows:
+    name: Windows bootstrap and tests
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.10.7"
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Verify locked Python metadata
+        run: |
+          $ErrorActionPreference = "Stop"
+          uv lock --check
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Install Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            apps/dashboard/pnpm-lock.yaml
+
+      - name: Install Rust MSVC toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable-x86_64-pc-windows-msvc
+          targets: x86_64-pc-windows-msvc
+
+      - name: Create isolated Python test environment
+        run: |
+          $ErrorActionPreference = "Stop"
+          $venv = Join-Path $env:RUNNER_TEMP "life-context-venv"
+          uv venv --python $env:PYTHON_VERSION $venv
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+          $python = Join-Path $venv "Scripts\python.exe"
+          $requirements = Join-Path $env:RUNNER_TEMP "life-context-requirements.txt"
+          uv export --locked --extra dev --output-file $requirements
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          uv pip install --python $python --requirement $requirements
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+          $scriptDirectory = Split-Path -Parent $python
+          Add-Content -Path $env:GITHUB_ENV -Value "LIFE_CONTEXT_CI_PYTHON=$python"
+          Add-Content -Path $env:GITHUB_PATH -Value $scriptDirectory
+
+      - name: Probe locked Python runtime imports
+        run: |
+          $ErrorActionPreference = "Stop"
+          & $env:LIFE_CONTEXT_CI_PYTHON -c "import fastapi, httpx, mss, PIL, psutil, pydantic, uvicorn, websockets; print('locked runtime imports: ok'); print('websockets='+websockets.__version__)"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Install JavaScript dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate runtime report
+        run: |
+          $ErrorActionPreference = "Stop"
+          $reportPath = Join-Path $env:GITHUB_WORKSPACE "runtime-report.json"
+          & pwsh -NoProfile -File scripts/check-runtime.ps1 `
+            -PythonPath $env:LIFE_CONTEXT_CI_PYTHON `
+            -RequireDesktop `
+            -Json | Tee-Object -FilePath $reportPath
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Upload runtime report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: life-context-runtime-report
+          path: runtime-report.json
+          if-no-files-found: warn
+
+      - name: Run Python tests
+        run: "& $env:LIFE_CONTEXT_CI_PYTHON -m pytest -q"
+
+      - name: Compile Python sources
+        run: "& $env:LIFE_CONTEXT_CI_PYTHON -m compileall -q apps packages services tests"
+
+      - name: Check Python formatting and linting (advisory)
+        continue-on-error: true
+        run: |
+          & $env:LIFE_CONTEXT_CI_PYTHON -m ruff check .
+          & $env:LIFE_CONTEXT_CI_PYTHON -m ruff format --check .
+
+      - name: Check dashboard
+        run: |
+          pnpm --dir apps/dashboard run typecheck
+          pnpm --dir apps/dashboard run test
+          pnpm --dir apps/dashboard run build
+
+      - name: Check Tauri frontend and Rust shell
+        run: |
+          pnpm --dir apps/desktop run typecheck
+          pnpm --dir apps/desktop run build
+          cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml --locked
+
+      - name: Check bootstrap-file formatting
+        run: pnpm exec prettier --check docs/BOOTSTRAP.md .github/workflows/ci.yml
